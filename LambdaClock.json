@@ -1,0 +1,139 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "LambdaClock CloudFormation Template",
+
+  "Parameters" : {},
+
+  "Mappings" : {},
+
+  "Resources" : 
+  {
+    "LambdaClockSNSTopic" : 
+    {
+      "Type" : "AWS::SNS::Topic",
+      "Properties" : {
+        "DisplayName" : "LambdaClock",
+        "TopicName" : "LambdaClock"
+      }
+    },
+
+    "LambdaClockRole" : 
+    {
+       "Type": "AWS::IAM::Role",
+       "Properties": 
+       {
+          "AssumeRolePolicyDocument": {
+             "Version" : "2012-10-17",
+             "Statement": 
+             [ {
+                "Effect": "Allow",
+                "Principal": 
+                {
+                   "Service": [ "lambda.amazonaws.com" ]
+                },
+                "Action": [ "sts:AssumeRole" ]
+             } ]
+          },
+          "ManagedPolicyArns": [ "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole", "arn:aws:iam::aws:policy/AmazonSNSFullAccess" ]
+        }
+    },
+
+    "LambdaClockCWEventsCreatorRole" : 
+    {
+       "Type": "AWS::IAM::Role",
+       "Properties": 
+       {
+          "AssumeRolePolicyDocument": {
+             "Version" : "2012-10-17",
+             "Statement": 
+             [ {
+                "Effect": "Allow",
+                "Principal": 
+                {
+                   "Service": [ "lambda.amazonaws.com" ]
+                },
+                "Action": [ "sts:AssumeRole" ]
+             } ]
+          },
+          "ManagedPolicyArns": [ "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole", "arn:aws:iam::aws:policy/CloudWatchEventsFullAccess" ]
+        }
+    },
+
+    "LambdaInvokePermission": {
+    "Type": "AWS::Lambda::Permission",
+    "Properties": {
+      "FunctionName" : { "Fn::GetAtt" : ["LambdaClock", "Arn"] },
+      "Action": "lambda:InvokeFunction",
+      "Principal": "events.amazonaws.com"
+      }
+    },
+
+    "LambdaClock" : 
+    {
+      "Type" : "AWS::Lambda::Function",
+      "Properties" : 
+      {
+        "Code" :  
+        {
+          "ZipFile" : {"Fn::Join" : ["", [ "\nvar AWS = require('aws-sdk');\nvar sns = new AWS.SNS();\nexports.handler = function(event, context) {\nvar publish = function(SNS_params) \n{\nsns.publish(SNS_params, function(err, data) \n{\nif (err) console.log(err, err.stack); \nelse \n{\nvar published_seconds = new Date().getSeconds();\nconsole.log('Published to SNS at:', published_seconds, 'seconds');\n}\ncontext.done();\n});\n}\nnow = new Date();\ntime_of_function = String(now.getHours()) + ':' + String(now.getMinutes()) + ':' + String(now.getSeconds());\nfunction_seconds = now.getMinutes()*60 + now.getSeconds()*1;\ntime_of_event = event.time.split('T')[1].replace(/Z/g, '');\ndate = event.time.split('T')[0];\nevent_seconds = time_of_event.split(':')[1]*60 + time_of_event.split(':')[2]*1;\ntime_difference = function_seconds - event_seconds;\nrule = event.resources[0].split('/')[1]\nconsole.log('Event Triggered At: ', time_of_event);\nconsole.log('Function Running At: ', time_of_function);\nconsole.log('Time Elapsed: ', time_difference);\nconsole.log('Associated Rule: ', rule);\nvar message = String(rule) + '+' + String(time_of_event);\nvar SNS_params = {\nMessage: message,\nTargetArn: '", { "Ref": "LambdaClockSNSTopic"}, "'\n};\nnow_seconds = new Date().getSeconds(); now_seconds = now_seconds*1;\nif (time_difference <= 55 && now_seconds <= 55) \n{\ndelay = (59 - now.getSeconds()*1)*1000;\nsetTimeout(function() { publish(SNS_params); }, delay);\n}\nelse\n{\nconsole.log('Time Difference Too Great: No Publish to SNS Topic ');\ncontext.done();\n}\n};" ]]}
+        },
+        "Description" : "Lambda Clock CW Event Response Function",
+        "Handler" : "index.handler",
+        "MemorySize" : 128,
+        "Role" :  
+        {
+            "Fn::GetAtt": 
+            [
+              "LambdaClockRole",
+              "Arn"
+            ]
+        },
+        "Runtime" : "nodejs",
+        "Timeout" : "60"
+      }
+    },
+
+    "LambdaClockCWEventsCreator" : 
+    {
+      "Type" : "AWS::Lambda::Function",
+      "DependsOn" : "LambdaClock",
+      "Properties" : 
+      {
+        "Code" :  
+        {
+          "ZipFile" : "\nvar response = require('cfn-response');\nvar AWS = require('aws-sdk');\nvar CWE = new AWS.CloudWatchEvents();\nexports.handler = function(event, context) {\nvar params = [];\nvar params0 = {\nName: 'LambdaClock_0',\nScheduleExpression: 'cron(0/5 * ? * MON-SUN *)',\nState: 'ENABLED'\n};\nparams.push(params0);\nparams.push(JSON.parse(JSON.stringify(params0).replace(/0/g, '1')));\nparams.push(JSON.parse(JSON.stringify(params0).replace(/0/g, '2')));\nparams.push(JSON.parse(JSON.stringify(params0).replace(/0/g, '3')));\nparams.push(JSON.parse(JSON.stringify(params0).replace(/0/g, '4')));\nvar end_counter = 0;\nparams.forEach(function(param)\n{\nCWE.putRule(param, function(err, data) {\nif (err) \n{\nconsole.log(err, err.stack);\ncontext.done();\n}\nelse\n{\nvar target_params = {\nRule: param.Name,\nTargets: [ \n{\nArn: event.ResourceProperties.function_arn,\nId: event.ResourceProperties.function_id\n}\n]}; \nCWE.putTargets(target_params, function(err, data) {\nif (err)\n{\nconsole.log(err, err.stack);\ncontext.done();\n}\nelse\n{\nif(end_counter == 4) response.send(event, context, 'SUCCESS', {'ResponseData': 'Nothing to see here'});\nelse end_counter += 1;\n}\n});\n} \n});\n});\n};"
+        },
+        "Description" : "Lambda Clock CW Event Creator Function",
+        "Handler" : "index.handler",
+        "MemorySize" : 128,
+        "Role" :  
+        {
+            "Fn::GetAtt": 
+            [
+              "LambdaClockCWEventsCreatorRole",
+              "Arn"
+            ]
+        },
+        "Runtime" : "nodejs",
+        "Timeout" : "30"
+      }
+    },
+
+    "LambdaClockCWEventsCreatorResource": {
+          "Type": "Custom::LambdaClockCWEventsCreatorResource",
+          "Properties": {
+          "ServiceToken": { "Fn::GetAtt" : ["LambdaClockCWEventsCreator", "Arn"] },
+          "function_arn": { "Fn::GetAtt" : ["LambdaClock", "Arn"] },
+          "function_id": "LambdaClock"
+      }
+    }
+  },
+
+  "Outputs" : {
+    "SNSTopicARN" : {
+      "Description" : "ARN of LambdaClock Topic",
+      "Value" : { "Ref": "LambdaClockSNSTopic"}
+    }
+  }
+}
