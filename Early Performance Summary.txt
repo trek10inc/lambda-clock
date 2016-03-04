@@ -1,0 +1,13 @@
+Anaylsis lambda function which subscribes to the LambdaClock SNS topic
+
+ --- SNS Response Function --- 
+ Max: 8826ms
+ Min: 0 
+ Average: 480.76ms
+ Standard Deviation: 294.57ms
+ Count: 5013 total invocations (~3.5 days)
+ Failures: 0 
+ Within One STD: 4047 
+ Within Two STD: 942 
+ Within Three STD: 10 
+ Beyond Three STD: 14
