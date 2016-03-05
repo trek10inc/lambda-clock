@@ -5,7 +5,7 @@ Currently CloudWatch Event Rules can be scheduled at minimum intervals of 5 minu
 ## LambdaClock Overview
 
 <center>
-![](/lambda-clock-overview.jpg?raw=true)
+![](http://i65.tinypic.com/2nhl3l4.jpg?raw=true)
 </center>
 
 There are five CloudWatch Event Rules each of which uses a cron expression for scheduling:
