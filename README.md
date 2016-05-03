@@ -1,6 +1,6 @@
 # LambdaClock
 
-##DEPRECIATED:
+##DEPRECATED:
 
 AWS Lambda now allows scheduling a one minute intervals. See [here](http://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-create-function.html).
 
