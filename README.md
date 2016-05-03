@@ -1,6 +1,10 @@
 # LambdaClock
 
-Currently CloudWatch Event Rules can be scheduled at minimum intervals of 5 minutes. At Trek10 we saw the need for a smaller interval, namely 1 minute. This need arose in the specifically context of handling autoscaling within ECS.
+##DEPRECIATED:
+
+AWS Lambda now allows scheduling a one minute intervals. See [here](http://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-create-function.html).
+
+~~Currently CloudWatch Event Rules can be scheduled at minimum intervals of 5 minutes.~~ At Trek10 we saw the need for a smaller interval, namely 1 minute. This need arose in the specifically context of handling autoscaling within ECS.
 
 ## LambdaClock Overview
 
